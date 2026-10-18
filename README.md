@@ -143,8 +143,8 @@ This recipe stands on other people's work. Each entry says what we used and whet
 - **[turboderp](https://github.com/turboderp-org):** [exllamav3](https://github.com/turboderp-org/exllamav3) and the
   EXL3 format (MIT), used for the conversion and the quality measurement.
 - **[anoane](https://github.com/anoane):** the DeepSeek-V4.1 port of exllamav3,
-  [PR #449](https://github.com/turboderp-org/exllamav3/pull/449). We converted with it at `c341a8f5`, with four small
-  patches published in the model card's provenance (two of them fixes reported on the PR).
+  [PR #449](https://github.com/turboderp-org/exllamav3/pull/449). We converted with it at `c341a8f5`, with five small
+  patches published in the model card's provenance (three of them fixes reported on the PR).
 - **NVIDIA:** the [PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) the image is
   built on (NGC terms).
 - **[Zig](https://ziglang.org):** the toolchain the engine is built with (MIT).

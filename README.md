@@ -1,5 +1,4 @@
-<!-- DRAFT, not published. Results marked TBD are filled after the TP2 test and the quality runs. Replace <ORG> with
-the publishing account. Publish only with operator approval. -->
+<!-- DRAFT, not published. Replace <ORG> with the publishing account. -->
 
 # DeepSeek-V4.1-Flash-1017 EXL3 on 2× DGX Spark with TensorFold
 
@@ -20,7 +19,7 @@ This repository is a set of scripts and pins, not an engine. The engine is **Ber
 
 | | |
 | --- | --- |
-| Checkpoint | [`<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw), ~TBD GB, plus DeepSeek's original shards 47–48 (Engram tables, ~190 GB) |
+| Checkpoint | [`<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw), ~197 GB, plus DeepSeek's original shards 47–48 (Engram tables, ~190 GB) |
 | Engine | [`bertholomus/TensorFold`](https://github.com/bertholomus/TensorFold) `deepseek-v41-zig` @ `3ff3b2ac` (serves); `deepseek-v41-tp2` @ `46917151` (writes each rank's cache once) |
 | Kit | [`bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10`](https://huggingface.co/bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10) `kit/` @ `789625a7`, with `vision/gate_bias_vl.safetensors` from the 1017 weights |
 | Image | `nvcr.io/nvidia/pytorch:26.07-py3` + both engines (built by `scripts/prepare.sh`) |

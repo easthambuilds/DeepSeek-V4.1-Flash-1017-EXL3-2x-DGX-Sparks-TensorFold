@@ -1,4 +1,4 @@
-<!-- DRAFT, not published. Replace <ORG> with the publishing account. -->
+<!-- DRAFT, not published. Publish only with operator approval. Replace <ORG> with the publishing account. -->
 
 # DeepSeek-V4.1-Flash-1017 EXL3 on 2× DGX Spark with TensorFold
 

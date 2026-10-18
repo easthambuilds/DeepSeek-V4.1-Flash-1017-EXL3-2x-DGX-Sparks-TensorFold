@@ -1,5 +1,3 @@
-<!-- DRAFT, not published. Publish only with operator approval. -->
-
 # DeepSeek-V4.1-Flash-1017 EXL3 on 2× DGX Spark with TensorFold
 
 Serve [**DeepSeek-V4.1-Flash-1017**](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017) from two NVIDIA DGX

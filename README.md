@@ -55,7 +55,7 @@ TBD. Measured on two GB10 nodes at the defaults, with the engine's own client (`
 On the head:
 
 ```bash
-git clone https://github.com/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2x-DGX-Sparks-TensorFold.git
+git clone https://github.com/tovereast/DeepSeek-V4.1-Flash-1017-EXL3-2x-DGX-Sparks-TensorFold.git
 cd DeepSeek-V4.1-Flash-1017-EXL3-2x-DGX-Sparks-TensorFold
 cp scripts/local.sh.example scripts/local.sh   # WORKER, HEAD_IP, IFACE, HCA, GID_INDEX
 ./start.sh

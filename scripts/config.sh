@@ -1,7 +1,7 @@
 # Pins and defaults. Put your own settings in scripts/local.sh (read after this file), not here.
 
 # The checkpoint this recipe serves, and the original weights it needs alongside
-QUANT_REPO=${QUANT_REPO:-<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw}
+QUANT_REPO=${QUANT_REPO:-easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw}
 QUANT_REV=${QUANT_REV:-main}
 BASE_REPO=deepseek-ai/DeepSeek-V4.1-Flash-1017
 BASE_REV=1bae0e1088993b9b82de08f59de5be5a34e42170

@@ -1,4 +1,4 @@
-<!-- DRAFT, not published. Publish only with operator approval. Replace <ORG> with the publishing account. -->
+<!-- DRAFT, not published. Publish only with operator approval. -->
 
 # DeepSeek-V4.1-Flash-1017 EXL3 on 2× DGX Spark with TensorFold
 
@@ -10,16 +10,16 @@ This repository is a set of scripts and pins, not an engine. The engine is **Ber
 [TensorFold](https://github.com/ashhart/TensorFold)**, unchanged, served the way
 [its own recipe](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10) runs it. What is ours:
 
-- **The checkpoint:** [`<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw).
+- **The checkpoint:** [`easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw).
   It is an EXL3 quant of the 1017 weights in Mia-AiLab's 2.9 bpw layout, made with published provenance
-  ([model card](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw)).
+  ([model card](https://huggingface.co/easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw)).
 - **One kit file:** the image routing bias from the 1017 weights instead of the base V4.1's.
 - **The setup:** `start.sh` / `prepare.sh` set up both Sparks, checking every downloaded byte, then serve and
   smoke-test.
 
 | | |
 | --- | --- |
-| Checkpoint | [`<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw), ~211 GB, plus DeepSeek's original shards 47–48 (Engram tables, ~190 GB) |
+| Checkpoint | [`easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw), ~211 GB, plus DeepSeek's original shards 47–48 (Engram tables, ~190 GB) |
 | Engine | [`bertholomus/TensorFold`](https://github.com/bertholomus/TensorFold) `deepseek-v41-zig` @ `3ff3b2ac` (serves); `deepseek-v41-tp2` @ `46917151` (writes each rank's cache once) |
 | Kit | [`bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10`](https://huggingface.co/bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10) `kit/` @ `789625a7`, with `vision/gate_bias_vl.safetensors` from the 1017 weights |
 | Image | `nvcr.io/nvidia/pytorch:26.07-py3` + both engines (built by `scripts/prepare.sh`) |
@@ -39,7 +39,7 @@ Raw results are in the model's `provenance/logs/`.
   AI publishes for Mia-AiLab's 2.9 bpw on their pair; we are still looking into why.
 - **Quality:** against DeepSeek's FP8 1017 release, on the same 100 × 2048 tokens: KL 0.0864 and top-1 agreement
   90.8%. LibertAIDAI's 1017 2.9 bpw scores 0.0857 and 90.9% on the same tokens, so the two are level
-  ([model card](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw)).
+  ([model card](https://huggingface.co/easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw)).
 
 ## Requirements
 

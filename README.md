@@ -137,7 +137,8 @@ This recipe stands on other people's work. Each entry says what we used and whet
   [#847](https://github.com/ashhart/TensorFold/issues/847).
 - **[Mia-AiLab / Mia's AI Lab](https://huggingface.co/Mia-AiLab):**
   - The [V4.1 2.9 bpw quant](https://huggingface.co/Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw) (MIT), whose
-    per-tensor bit-width map and layout our 1017 checkpoint follows.
+    per-tensor bit-width map and layout our 1017 checkpoint follows, and whose `chat_template.jinja` the checkpoint
+    carries unchanged (the template the engine serves V4.1 with).
   - The [GLM-5.3-Flash TensorFold recipe](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold),
     whose layout this repository follows: `start.sh`, `scripts/prepare.sh`, `local.sh`, saved logs.
 - **[turboderp](https://github.com/turboderp-org):** [exllamav3](https://github.com/turboderp-org/exllamav3) and the

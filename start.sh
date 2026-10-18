@@ -20,6 +20,9 @@ if running_here "$CONTAINER" || running_there "$CONTAINER"; then
 else
   remove_both "$CONTAINER" >/dev/null   # a stopped container from an earlier run; its log is kept
 fi
+# GB10 shares memory between GPU and CPU and reclaims page cache too slowly for CUDA (tools/evict_page_cache.py)
+note "here: $(python3 "$ROOT/tools/evict_page_cache.py" "$DATA_DIR"/{model,engram,cache})"
+note "$WORKER: $(on_worker python3 - "$WORKER_DATA_DIR"/{model,engram,cache} < "$ROOT/tools/evict_page_cache.py")"
 for side in here there; do
   if [ $side = here ]; then avail=$(free -g | awk '/^Mem:/{print $7}'); else avail=$(on_worker "free -g" | awk '/^Mem:/{print $7}'); fi
   [ "$avail" -ge 110 ] || note "warning: only $avail GiB memory available $side (the engine wants ~110): stop other GPU work"

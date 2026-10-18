@@ -29,25 +29,32 @@ This repository is a set of scripts and pins, not an engine. The engine is **Ber
 
 ## Results
 
-TBD. Measured on two GB10 nodes at the defaults, with the engine's own client (`kit_bench.py`) and gates:
+v1 (2.9 bpw), measured on two GB10 nodes at the defaults, with the engine's own client (`kit_bench.py`) and gates.
+Raw results are in the model's `provenance/logs/`.
 
-- **Release gates:** drafted == serial, concurrent == solo (burst and staggered), images.
-- **Decode:** code / prose / structured, at 1 / 2 / 4 streams.
-- **Prefill:** 8K–128K.
-- **Quality:** KL divergence and top-1 agreement against DeepSeek's FP8 1017 release, beside Mia-AiLab's 2.9 bpw on
-  the base V4.1 and LibertAIDAI's 1017 2.9 bpw ([model card](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw)).
+- **Release gates:** all pass. Concurrent == solo, drafted and drafts off, burst and staggered: 12/12 each.
+  Drafted == serial 12/12. Images 6/6.
+- **Decode (tok/s, code / prose / structured):** 84.5 / 56.3 / 101.3 (set a) and 94.5 / 61.3 / 138.6 (set b).
+  2 / 4 streams: 82.8 / 118.6 in total. Sustained: 128.
+- **Prefill (tok/s, 8K / 32K / 64K / 128K):** 1557 / 1597 / 1584 / 1543. That is about 35% below what Bertholomus
+  AI publishes for Mia-AiLab's 2.9 bpw on their pair; we are still looking into why.
+- **Quality:** against DeepSeek's FP8 1017 release, on the same 100 × 2048 tokens: KL 0.0864 and top-1 agreement
+  90.8%. LibertAIDAI's 1017 2.9 bpw scores 0.0857 and 90.9% on the same tokens, so the two are level
+  ([model card](https://huggingface.co/<ORG>/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw)).
 
 ## Requirements
 
 - **Two DGX Sparks** (or two GB10 systems with 128 GB unified memory), with nothing else large on their GPUs. Each
-  needs ~110 GiB free when the server starts.
+  needs ~110 GiB free when the server starts. `start.sh` first drops the model's own files from the page cache
+  (`tools/evict_page_cache.py`, no root needed): GB10 does not reclaim page cache fast enough for CUDA, and right
+  after setup the engine would otherwise fail to create its CUDA context.
 - **A direct ConnectX-7 link** with an IPv4 address on each end and a RoCE v2 GID. A cabled port shows up as two
   RoCE devices (e.g. `rocep1s0f1` / `roceP2p1s0f1`). Name both in `HCA`. Find the GID index with `show_gids`: 5 is
   the default, and some single-rail pairs use 3.
 - **Key-based ssh** from the first Spark (the head, which runs the API) to the second (the worker).
 - **Docker** with the NVIDIA runtime, plus `rsync` and `python3`, on both Sparks.
 - **Disk, on each Spark:** ~520 GB under `DATA_DIR` (default `~/.cache/dsv41-1017-tf`). That is the checkpoint
-  ~TBD GB, Engram shards ~190 GB, the rank cache ~106 GB and the kit ~2 GB. The image needs ~30 GB more under
+  ~197 GB, Engram shards ~190 GB, the rank cache ~106 GB and the kit ~2 GB. The image needs ~30 GB more under
   Docker's root.
 
 ## Quick start

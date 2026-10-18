@@ -2,7 +2,7 @@
 
 # The checkpoint this recipe serves, and the original weights it needs alongside
 QUANT_REPO=${QUANT_REPO:-easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw}
-QUANT_REV=${QUANT_REV:-d65871323435b7546fcce02a7d80e71ea3bc5869}
+QUANT_REV=${QUANT_REV:-2913ea75b326801b6645bc2ffaefb485d049abc2}
 BASE_REPO=deepseek-ai/DeepSeek-V4.1-Flash-1017
 BASE_REV=1bae0e1088993b9b82de08f59de5be5a34e42170
 ENGRAM_FILES="model-00047-of-00048.safetensors model-00048-of-00048.safetensors"

@@ -14,7 +14,8 @@ on_worker true || die "no key-based ssh to $WORKER (ssh-copy-id $WORKER)"
 for side in here there; do
   run() { if [ $side = here ]; then bash -c "$1"; else on_worker "$1"; fi; }
   hca=$HCA; dd=$DATA_DIR; [ $side = there ] && hca=$WORKER_HCA dd=$WORKER_DATA_DIR
-  run "docker info --format '{{.Runtimes}}' | grep -q nvidia" || die "$side: Docker without the NVIDIA runtime"
+  run "docker info --format '{{.Runtimes}}' | grep -q nvidia || test -e /etc/cdi/nvidia.yaml || test -e /var/run/cdi/nvidia.yaml" \
+    || die "$side: Docker without the NVIDIA runtime or a CDI spec for the GPU"
   run "command -v rsync >/dev/null && command -v python3 >/dev/null" || die "$side: needs rsync and python3"
   for d in ${hca//,/ }; do
     run "test -d /sys/class/infiniband/$d" || die "$side: no RoCE device $d"
@@ -59,7 +60,7 @@ on_worker "python3 $WORKER_DATA_DIR/tools/hub_fetch.py $QUANT_REPO $QUANT_REV $W
 
 step "4/5 Kernel kit, with the 1017 image routing bias"
 K=$DATA_DIR/kit
-if [ -f "$K/NOTICE-1017.txt" ] && bash "$K/tools/verify_kit.sh" >/dev/null; then
+if [ -f "$K/NOTICE-1017.txt" ] && [ -f "$K/$TOPK256_CUBIN" ] && bash "$K/tools/verify_kit.sh" >/dev/null; then
   note "kit-1017 present and verified"
 else
   python3 "$TOOLS/hub_fetch.py" "$KIT_REPO" "$KIT_REV" "$DATA_DIR/kit-src" "kit/*" | filter
@@ -71,8 +72,23 @@ else
   [ "$(sha256sum "$K/vision/gate_bias_vl.safetensors" | cut -d' ' -f1)" = "$BIAS_VL_SHA256" ] \
     || die "the 1017 bias_vl does not match the pinned sha256"
   sed -i "s/^$BIAS_VL_BASE_SHA256  vision\/gate_bias_vl.safetensors$/$BIAS_VL_SHA256  vision\/gate_bias_vl.safetensors/" "$K/MANIFEST"
+  # the _topk_sel N=KK=256 variant: without it a prompt of exactly 512 or 513 tokens stops the server
+  # (MissingTritonVariant)
+  grep -q "^$AOT_JSON_BASE_SHA256  aot/aot.json$" "$K/MANIFEST" || die "unexpected kit MANIFEST (aot/aot.json)"
+  for f in aot/aot.json "$TOPK256_CUBIN"; do
+    curl -fsSL "https://raw.githubusercontent.com/$KIT_FIX_REPO/$KIT_FIX_REV/kit/$f" -o "$K/$f.new" \
+      || die "could not download kit/$f from $KIT_FIX_REPO"
+  done
+  [ "$(sha256sum "$K/aot/aot.json.new" | cut -d' ' -f1)" = "$AOT_JSON_SHA256" ] \
+    && [ "$(sha256sum "$K/$TOPK256_CUBIN.new" | cut -d' ' -f1)" = "$TOPK256_CUBIN_SHA256" ] \
+    || die "the kit fix does not match its pinned sha256"
+  mv "$K/aot/aot.json.new" "$K/aot/aot.json" && mv "$K/$TOPK256_CUBIN.new" "$K/$TOPK256_CUBIN"
+  sed -i "s/^$AOT_JSON_BASE_SHA256  aot\/aot.json$/$AOT_JSON_SHA256  aot\/aot.json/" "$K/MANIFEST"
+  echo "$TOPK256_CUBIN_SHA256  $TOPK256_CUBIN" >> "$K/MANIFEST"
   echo "1017 kit: $KIT_REPO at ${KIT_REV:0:8} with vision/gate_bias_vl.safetensors made by tools/make_bias_vl.py from" \
     "$BASE_REPO at ${BASE_REV:0:8} (sha256 $BIAS_VL_SHA256); MANIFEST updated for that one file." > "$K/NOTICE-1017.txt"
+  echo "Also: aot/aot.json and $TOPK256_CUBIN from $KIT_FIX_REPO at ${KIT_FIX_REV:0:8} (_topk_sel" \
+    "N=KK=256, #13); MANIFEST updated for those two." >> "$K/NOTICE-1017.txt"
   bash "$K/tools/verify_kit.sh" || die "kit-1017 does not verify"
   rm -rf "$DATA_DIR/bias-src"
 fi
@@ -87,8 +103,12 @@ if have "$DATA_DIR" && on_worker "$(declare -f have); have $WORKER_DATA_DIR" \
    && [ "$(cat "$DATA_DIR/cache/.made-from" 2>/dev/null)" = "$stamp" ]; then
   note "present on both"
 else
-  rm -rf "$DATA_DIR/cache"/{tf-ds-rank,dsv41_token_map.json}
-  on_worker "rm -rf $WORKER_DATA_DIR/cache/{tf-ds-rank,dsv41_token_map.json}"
+  # No wipe: the engine keys each rank cache file by the checkpoint, the config, the rank split and its own source,
+  # deletes files of another key itself and writes through a .partial, so a complete cache from an interrupted run is
+  # reused instead of written again (~106 GB a rank)
+  # Step 3 read ~400 GB through the page cache, and CUDA on GB10 does not reclaim it fast enough (as in start.sh)
+  note "here: $(python3 "$TOOLS/evict_page_cache.py" "$DATA_DIR"/{model,engram,cache})"
+  note "worker: $(on_worker python3 - "$WORKER_DATA_DIR"/{model,engram,cache} < "$TOOLS/evict_page_cache.py")"
   remove_both "$CONTAINER-inputs" >/dev/null
   eval "$(inputs_cmd 0 "$DATA_DIR" "$IFACE" "$HCA")" >/dev/null
   # rank 0 owns the TCPStore: rank 1 starts once its port listens (a fixed sleep races on a cold start)

@@ -9,7 +9,7 @@ ENGRAM_FILES="model-00047-of-00048.safetensors model-00048-of-00048.safetensors"
 
 # Engine: Bertholomus AI's dsv41 family for TensorFold (Zig engine serves, Python engine writes the rank caches)
 ENGINE_GIT=https://github.com/bertholomus/TensorFold.git
-ZIG_ENGINE_REV=3ff3b2ac1d71a789cb930068c46d9abed025eefa   # branch deepseek-v41-zig
+ZIG_ENGINE_REV=9f820999f2a7ee0ffee3b6e4389ba22338bcf4a3   # branch deepseek-v41-zig
 PY_ENGINE_REV=469171515cd3c0df14346d83d763b4e89d4bafcf    # branch deepseek-v41-tp2
 ZIG_URL=https://ziglang.org/download/0.17.0/zig-aarch64-linux-0.17.0.tar.xz
 ZIG_SHA256=9e8d11661d4ae3bd57702a3832781e23ad151dde5798e16a5ccd503f65234ff8

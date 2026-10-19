@@ -18,7 +18,7 @@ This repository is a set of scripts and pins, not an engine. The engine is **Ber
 | | |
 | --- | --- |
 | Checkpoint | [`easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw), ~211 GB, plus DeepSeek's original shards 47–48 (Engram tables, ~190 GB) |
-| Engine | [`bertholomus/TensorFold`](https://github.com/bertholomus/TensorFold) `deepseek-v41-zig` @ `3ff3b2ac` (serves); `deepseek-v41-tp2` @ `46917151` (writes each rank's cache once) |
+| Engine | [`bertholomus/TensorFold`](https://github.com/bertholomus/TensorFold) `deepseek-v41-zig` @ `9f820999` (serves); `deepseek-v41-tp2` @ `46917151` (writes each rank's cache once) |
 | Kit | [`bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10`](https://huggingface.co/bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10) `kit/` @ `789625a7`, with `vision/gate_bias_vl.safetensors` from the 1017 weights and the `_topk_sel` N=KK=256 variant from [the TP2 recipe](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10) @ `58186d12` |
 | Image | `nvcr.io/nvidia/pytorch:26.07-py3` + both engines (built by `scripts/prepare.sh`) |
 | API model id | `DeepSeek-V4.1-Flash-1017-EXL3` |

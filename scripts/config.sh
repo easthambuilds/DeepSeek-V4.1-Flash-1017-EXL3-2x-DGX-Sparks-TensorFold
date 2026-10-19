@@ -20,6 +20,14 @@ KIT_REPO=bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10
 KIT_REV=789625a7081e91643cb61ceafd15f588850c511a
 BIAS_VL_BASE_SHA256=0cbdebfbffed15722f096d6b8290933135d4393d0920059f7bcad4789f19387b
 BIAS_VL_SHA256=4745da4b5f24c67170ee24e2c95652e45ba13c0ca0abc2be3cc7a2a3545792d0
+# The _topk_sel N=KK=256 variant (prompts of exactly 512 or 513 tokens), which the pinned kit predates: aot/aot.json
+# and one cubin from the kit in git in Bertholomus AI's TP2 recipe (#13)
+KIT_FIX_REPO=bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10
+KIT_FIX_REV=58186d120bfa4a7f19cc0da03b53f64de2685239
+AOT_JSON_BASE_SHA256=092b6d274a5f86b5fd69fa3cd04703686e4e998ceb3ecc997be8359c89b841b0
+AOT_JSON_SHA256=29dccbcfdfc327a2ca83f40eb88c2bad83f9f61128e0cd27c29a1243d6fcd603
+TOPK256_CUBIN=aot/cubins/a2c0ea5eb9a9c7aa6028441066bea0a479431badcf841a4892fe735ac8bb805a.cubin
+TOPK256_CUBIN_SHA256=b3bbb9b0d874a8875c9a6e18975588aa547d03db6aeb614c155324cb5bf76f8f
 
 # Where everything lives on each Spark (~520 GB: checkpoint ~200, Engram shards ~190, rank cache ~106, kit ~2)
 DATA_DIR=${DATA_DIR:-$HOME/.cache/dsv41-1017-tf}

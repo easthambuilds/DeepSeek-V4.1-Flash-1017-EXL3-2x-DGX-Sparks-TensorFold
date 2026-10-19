@@ -19,7 +19,7 @@ This repository is a set of scripts and pins, not an engine. The engine is **Ber
 | --- | --- |
 | Checkpoint | [`easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw`](https://huggingface.co/easthambuilds/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw), ~211 GB, plus DeepSeek's original shards 47–48 (Engram tables, ~190 GB) |
 | Engine | [`bertholomus/TensorFold`](https://github.com/bertholomus/TensorFold) `deepseek-v41-zig` @ `3ff3b2ac` (serves); `deepseek-v41-tp2` @ `46917151` (writes each rank's cache once) |
-| Kit | [`bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10`](https://huggingface.co/bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10) `kit/` @ `789625a7`, with `vision/gate_bias_vl.safetensors` from the 1017 weights |
+| Kit | [`bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10`](https://huggingface.co/bertholomus/DeepSeek-V4.1-Flash-TensorFold-TP2-2xGB10) `kit/` @ `789625a7`, with `vision/gate_bias_vl.safetensors` from the 1017 weights and the `_topk_sel` N=KK=256 variant from [the TP2 recipe](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10) @ `58186d12` |
 | Image | `nvcr.io/nvidia/pytorch:26.07-py3` + both engines (built by `scripts/prepare.sh`) |
 | API model id | `DeepSeek-V4.1-Flash-1017-EXL3` |
 | Defaults | `--context 1048576 --parallel 4 --thinking`, temperature 1.0, top-p 0.95 (DeepSeek's recommended sampling) |
@@ -105,8 +105,14 @@ Each step skips work already done, so it is safe to re-run.
    - The new file is made by the kit's own `make_bias_vl.py`, run unchanged. Its input is a sparse stand-in for the
      original checkpoint holding only the bytes it reads (`tools/fetch_bias_vl.py`, 43 HTTP range reads, 66 KB,
      instead of 46 shards).
-   - The result must match the pinned sha256 `4745da4b…`. The `MANIFEST` line is updated, `NOTICE-1017.txt` records
-     the change, and the kit is verified again on both Sparks.
+   - The result must match the pinned sha256 `4745da4b…`. The `MANIFEST` line is updated and `NOTICE-1017.txt`
+     records the change.
+   - It adds the `_topk_sel` N=KK=256 variant, which the pinned kit predates: `aot/aot.json` and one cubin from the
+     kit in git in [the TP2 recipe](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10) at
+     `58186d12` ([#13](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10/pull/13)), each checked
+     against a pinned sha256. Without it a prompt of exactly 512 or 513 tokens stops the server
+     (`MissingTritonVariant`). Both `MANIFEST` lines are updated, `NOTICE-1017.txt` records it, and the kit is
+     verified again on both Sparks.
 5. **Rank caches:** starts the Python engine once on both ranks. It writes each rank's weights (~106 GB) and the
    Engram token map, as the engine's `tools/dsv41-zig/build_inputs.sh` does, then stops it.
 
@@ -134,8 +140,9 @@ This recipe stands on other people's work. Each entry says what we used and whet
   - [the TP2 recipe](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10), whose run commands,
     settings and release gates our scripts follow.
 
-  Used unchanged, except that one kit file (`vision/gate_bias_vl.safetensors`) is replaced with 1017's and its
-  `MANIFEST` line updated.
+  Used unchanged, except that one kit file (`vision/gate_bias_vl.safetensors`) is replaced with 1017's, and the
+  `_topk_sel` N=KK=256 variant is taken from the TP2 recipe's own kit (`aot/aot.json` and one cubin); their
+  `MANIFEST` lines are updated.
 - **[ashhart](https://github.com/ashhart):** [TensorFold](https://github.com/ashhart/TensorFold) (Apache-2.0), the
   engine framework the `dsv41` family is built on, and the community gates in
   [#847](https://github.com/ashhart/TensorFold/issues/847).

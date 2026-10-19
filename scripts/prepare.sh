@@ -102,8 +102,12 @@ if have "$DATA_DIR" && on_worker "$(declare -f have); have $WORKER_DATA_DIR" \
    && [ "$(cat "$DATA_DIR/cache/.made-from" 2>/dev/null)" = "$stamp" ]; then
   note "present on both"
 else
-  rm -rf "$DATA_DIR/cache"/{tf-ds-rank,dsv41_token_map.json}
-  on_worker "rm -rf $WORKER_DATA_DIR/cache/{tf-ds-rank,dsv41_token_map.json}"
+  # No wipe: the engine keys each rank cache file by the checkpoint, the config, the rank split and its own source,
+  # deletes files of another key itself and writes through a .partial, so a complete cache from an interrupted run is
+  # reused instead of written again (~106 GB a rank)
+  # Step 3 read ~400 GB through the page cache, and CUDA on GB10 does not reclaim it fast enough (as in start.sh)
+  note "here: $(python3 "$TOOLS/evict_page_cache.py" "$DATA_DIR"/{model,engram,cache})"
+  note "worker: $(on_worker python3 - "$WORKER_DATA_DIR"/{model,engram,cache} < "$TOOLS/evict_page_cache.py")"
   remove_both "$CONTAINER-inputs" >/dev/null
   eval "$(inputs_cmd 0 "$DATA_DIR" "$IFACE" "$HCA")" >/dev/null
   # rank 0 owns the TCPStore: rank 1 starts once its port listens (a fixed sleep races on a cold start)

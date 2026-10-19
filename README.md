@@ -115,6 +115,9 @@ Each step skips work already done, so it is safe to re-run.
      verified again on both Sparks.
 5. **Rank caches:** starts the Python engine once on both ranks. It writes each rank's weights (~106 GB) and the
    Engram token map, as the engine's `tools/dsv41-zig/build_inputs.sh` does, then stops it.
+   - The downloaded files are dropped from the page cache first, as `start.sh` does.
+   - A rank cache left complete by an interrupted run is kept: the engine names each file by a key of the checkpoint,
+     the config and the rank split, removes files of another key itself and writes through a `.partial`.
 
 **Why the bias file:** 1017's image routing bias (`gate.bias_vl`) differs from the base V4.1's. The published kit's
 copy is the base's (sha256 `0cbdebfb…`), while 1017's is `4745da4b…`.

@@ -49,7 +49,8 @@ Raw results are in the model's `provenance/logs/`.
   RoCE devices (e.g. `rocep1s0f1` / `roceP2p1s0f1`). Name both in `HCA`. Find the GID index with `show_gids`: 5 is
   the default, and some single-rail pairs use 3.
 - **Key-based ssh** from the first Spark (the head, which runs the API) to the second (the worker).
-- **Docker** with the NVIDIA runtime, plus `rsync` and `python3`, on both Sparks.
+- **Docker** with the NVIDIA runtime or a CDI spec for the GPU (`/etc/cdi/nvidia.yaml` or `/var/run/cdi/nvidia.yaml`),
+  plus `rsync` and `python3`, on both Sparks.
 - **Disk, on each Spark:** ~520 GB under `DATA_DIR` (default `~/.cache/dsv41-1017-tf`). That is the checkpoint
   ~211 GB, Engram shards ~190 GB, the rank cache ~106 GB and the kit ~2 GB. The image needs ~30 GB more under
   Docker's root.
@@ -89,7 +90,8 @@ Images: send OpenAI-style `image_url` parts with `data:` URLs. The engine's
 
 Each step skips work already done, so it is safe to re-run.
 
-1. **Preflight on both Sparks:** ssh, the NVIDIA runtime, the RoCE devices and GID type, the route to the head, disk.
+1. **Preflight on both Sparks:** ssh, the NVIDIA runtime (or its CDI spec), the RoCE devices and GID type, the route
+   to the head, disk.
 2. **Image:** builds `dsv41-1017-tf:<pin hash>` from `docker/Dockerfile`.
    - NVIDIA's PyTorch 26.07 container.
    - Zig 0.17.0, sha256-checked.

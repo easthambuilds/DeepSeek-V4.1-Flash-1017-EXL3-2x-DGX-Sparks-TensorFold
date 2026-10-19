@@ -14,7 +14,8 @@ on_worker true || die "no key-based ssh to $WORKER (ssh-copy-id $WORKER)"
 for side in here there; do
   run() { if [ $side = here ]; then bash -c "$1"; else on_worker "$1"; fi; }
   hca=$HCA; dd=$DATA_DIR; [ $side = there ] && hca=$WORKER_HCA dd=$WORKER_DATA_DIR
-  run "docker info --format '{{.Runtimes}}' | grep -q nvidia" || die "$side: Docker without the NVIDIA runtime"
+  run "docker info --format '{{.Runtimes}}' | grep -q nvidia || test -e /etc/cdi/nvidia.yaml || test -e /var/run/cdi/nvidia.yaml" \
+    || die "$side: Docker without the NVIDIA runtime or a CDI spec for the GPU"
   run "command -v rsync >/dev/null && command -v python3 >/dev/null" || die "$side: needs rsync and python3"
   for d in ${hca//,/ }; do
     run "test -d /sys/class/infiniband/$d" || die "$side: no RoCE device $d"

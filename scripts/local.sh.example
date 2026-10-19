@@ -14,3 +14,7 @@ GID_INDEX=5                    # RoCE v2 GID index; check with show_gids
 # HOST=0.0.0.0                 # listen beyond localhost (set API_KEY_FILE too)
 # API_KEY_FILE=$HOME/.config/dsv41-1017-tf/api-key
 # IMAGE=...                    # use an image you built yourself instead of scripts/prepare.sh's
+# TF_MEMORY_RESERVE_GIB=4      # rank 0's CUDA reserve when the default (a tenth of the memory) leaves the weights no room
+# INPUTS_CONTEXT=65536         # a smaller window and one stream for step 5's Python start (less memory while it
+# INPUTS_PARALLEL=1            #   writes the rank caches; the caches are the same)
+# SERVE_EXTRA="--prompt-cache-gib 1"  # more arguments for every start of tensorfold-native serve

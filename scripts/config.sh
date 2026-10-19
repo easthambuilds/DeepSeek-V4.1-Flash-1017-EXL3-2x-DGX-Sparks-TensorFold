@@ -48,5 +48,11 @@ CONTEXT=${CONTEXT:-1048576}
 PARALLEL=${PARALLEL:-4}
 MAX_TOKENS=${MAX_TOKENS:-32768}
 API_KEY_FILE=${API_KEY_FILE:-}  # a file holding the API key; every route but /health then needs it
+# Optional, for a tight memory budget (unset: the engine's defaults)
+TF_MEMORY_RESERVE_GIB=${TF_MEMORY_RESERVE_GIB:-}  # rank 0's CUDA reserve in GiB, >= 2 (default: a tenth
+                                                 # of the memory, ~12.2 GiB on GB10)
+INPUTS_CONTEXT=${INPUTS_CONTEXT:-1048576}        # window and streams of step 5's one Python start; the rank caches
+INPUTS_PARALLEL=${INPUTS_PARALLEL:-4}            # do not depend on them (their key is the checkpoint and its config)
+SERVE_EXTRA=${SERVE_EXTRA:-}                      # more tensorfold-native serve arguments, e.g. --prompt-cache-gib 1
 TP_PORT=29620
 CONTAINER=dsv41-1017-tf

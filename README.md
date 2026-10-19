@@ -130,6 +130,16 @@ copy is the base's (sha256 `0cbdebfb…`), while 1017's is `4745da4b…`.
 `MAX_TOKENS`, `HOST`, `PORT`, `API_KEY_FILE`, `DATA_DIR`, `FABRIC_PEER` (copy the weights over the link), and
 `WORKER_IFACE` / `WORKER_HCA` (when the worker's names differ).
 
+For a tight memory budget (for instance higher `vm.min_free_kbytes` or `vm.watermark_scale_factor` than the
+defaults), three more are optional:
+
+- `TF_MEMORY_RESERVE_GIB`: rank 0's CUDA reserve, 2 GiB or more. By default the engine keeps a tenth of the memory
+  (~12.2 GiB on GB10), so the 98.8 GiB of weights need ~111 GiB free at load; where less is free, the engine stops
+  with an error that names this setting.
+- `INPUTS_CONTEXT` / `INPUTS_PARALLEL`: the window and streams of step 5's one Python start, which needs less memory
+  with e.g. 65536 and 1. The rank caches are the same: their key is the checkpoint and its config.
+- `SERVE_EXTRA`: more `tensorfold-native serve` arguments for every start, e.g. `--prompt-cache-gib 1`.
+
 ## Credits
 
 This recipe stands on other people's work. Each entry says what we used and whether we changed it.

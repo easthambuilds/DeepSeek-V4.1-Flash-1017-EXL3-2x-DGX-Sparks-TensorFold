@@ -44,7 +44,7 @@ inputs_cmd() {  # $1 rank, $2 data dir, $3 netdev, $4 RoCE devices
     "-e TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions -e TF_DS_REPLAY=1 -e TF_DS_PREFILL_CHUNK=2048" \
     "-e TF_DS_RANK_CACHE=/root/.cache/tf-ds-rank -e TF_DS_RANK_CACHE_READERS=32 -e TF_DS_ENGRAM=/engram" \
     "--entrypoint python3 $IMAGE -m tensorfold serve /model --tp 2 --rank $1 --master $HEAD_IP --host 127.0.0.1" \
-    "--port $PORT --context 1048576 --vision --parallel 4 --mtp-drafts 5"
+    "--port $PORT --context ${INPUTS_CONTEXT:-1048576} --vision --parallel ${INPUTS_PARALLEL:-4} --mtp-drafts 5"
 }
 
 # Serving: rank 1 follows rank 0 (the engine's README, v0.6.x)
@@ -59,12 +59,12 @@ rank0_cmd() {  # extra arguments go to tensorfold-native serve
   local key="" keyarg=""
   if [ -n "$API_KEY_FILE" ]; then key="-v $API_KEY_FILE:/run/api-key:ro"; keyarg="--api-key-file /run/api-key"; fi
   echo "docker run -d --name $CONTAINER $(run_opts "$DATA_DIR" "$IFACE" "$HCA") $key -e TF_DS_REPLAY_FLOOR=1" \
-    "-e TF_TP_WORLD=2 -e TF_TP_MASTER=$HEAD_IP -e TF_TP_PORT=$TP_PORT -e TF_DS_RANK_CACHE=/cache/tf-ds-rank" \
+    "${TF_MEMORY_RESERVE_GIB:+-e TENSORFOLD_MEMORY_RESERVE_GIB=$TF_MEMORY_RESERVE_GIB} -e TF_TP_WORLD=2 -e TF_TP_MASTER=$HEAD_IP -e TF_TP_PORT=$TP_PORT -e TF_DS_RANK_CACHE=/cache/tf-ds-rank" \
     "-e TF_DS_KIT=/kit -e TENSORFOLD_CUDA_KERNELS=/kit/aot -e TF_DS_ENGRAM=/engram" \
     "-e TF_DS_TOKEN_MAP=/cache/dsv41_token_map.json -e TF_RDMA_DEVICES=$HCA -e TF_DS_GRAPHS=1 -e TF_DS_HC_SIDE=1" \
     "-e TF_DS_L2_PREFETCH=1 -e TF_DS_ENGRAM_AIO=1 --entrypoint /opt/tf/native/bin/tensorfold-native $IMAGE" \
     "serve /model --host $HOST --port $PORT --name $MODEL_NAME $keyarg --context $CONTEXT --parallel $PARALLEL" \
-    "--thinking --max-tokens $MAX_TOKENS --temperature 1.0 --top-p 0.95 --top-k 20 --backend cuda $*"
+    "--thinking --max-tokens $MAX_TOKENS --temperature 1.0 --top-p 0.95 --top-k 20 --backend cuda ${SERVE_EXTRA:-} $*"
 }
 
 running_here() { docker ps --format '{{.Names}}' | grep -qx "$1"; }

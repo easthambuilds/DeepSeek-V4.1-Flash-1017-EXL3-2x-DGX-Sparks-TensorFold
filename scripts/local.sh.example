@@ -10,6 +10,7 @@ GID_INDEX=5                    # RoCE v2 GID index; check with show_gids
 # FABRIC_PEER=192.0.2.2        # copy the weights to the worker over the link instead of the ssh route
 # WORKER_IFACE=...             # when the worker's netdev or RoCE names differ from the head's
 # WORKER_HCA=...
+# WORKER_GID_INDEX=...         # when the worker's IPv4 RoCE v2 GID index differs from the head's (show_gids)
 # DATA_DIR=/data/dsv41-1017-tf # default ~/.cache/dsv41-1017-tf, the same path on both Sparks
 # HOST=0.0.0.0                 # listen beyond localhost (set API_KEY_FILE too)
 # API_KEY_FILE=$HOME/.config/dsv41-1017-tf/api-key

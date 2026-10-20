@@ -154,7 +154,7 @@ copy is the base's (sha256 `0cbdebfb…`), while 1017's is `4745da4b…`.
 
 `scripts/config.sh` holds the pins and defaults. Override any of them in `scripts/local.sh`: `CONTEXT`, `PARALLEL`,
 `MAX_TOKENS`, `HOST`, `PORT`, `API_KEY_FILE`, `DATA_DIR`, `FABRIC_PEER` (copy the weights over the link),
-`WORKER_IFACE` / `WORKER_HCA` (when the worker's names differ), and `ABLIT` (0 or 1, above).
+`WORKER_IFACE` / `WORKER_HCA` / `WORKER_GID_INDEX` (when the worker's names or IPv4 GID index differ), and `ABLIT` (0 or 1, above).
 
 ## Credits
 

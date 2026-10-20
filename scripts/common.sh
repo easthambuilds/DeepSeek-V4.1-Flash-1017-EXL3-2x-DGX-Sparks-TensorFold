@@ -29,6 +29,7 @@ ablit_notice() {
 [ -n "$HCA" ] || die "set HCA (the link's RoCE devices) in scripts/local.sh"
 WORKER_IFACE=${WORKER_IFACE:-$IFACE}
 WORKER_HCA=${WORKER_HCA:-$HCA}
+WORKER_GID_INDEX=${WORKER_GID_INDEX:-$GID_INDEX}
 
 on_worker() { ssh -o BatchMode=yes -o ConnectTimeout=10 "$WORKER" "$@"; }
 
@@ -45,17 +46,18 @@ PIN_HASH=$(printf '%s\n' "$BASE_IMAGE" "$ENGINE_GIT" "$ZIG_ENGINE_REV" "$PY_ENGI
   "$(cat "$ROOT/docker/Dockerfile")" | sha256sum | cut -c1-12)
 IMAGE=${IMAGE:-dsv41-1017-tf:$PIN_HASH}
 
-# docker run options both ranks share; $1 data dir, $2 netdev, $3 RoCE devices
+# docker run options both ranks share; $1 data dir, $2 netdev, $3 RoCE devices, $4 RoCE v2 GID index
 run_opts() {
   echo "--gpus all --network host --ipc host --ulimit memlock=-1 --ulimit stack=67108864 --cap-add IPC_LOCK" \
     "--device /dev/infiniband -v $1/$MODEL_SUB:/model:ro -v $1/engram:/engram:ro -v $1/kit:/kit:ro -v $1/$CACHE_SUB:/cache" \
-    "-e NCCL_IB_HCA=$3 -e NCCL_IB_GID_INDEX=$GID_INDEX -e NCCL_SOCKET_IFNAME=$2 -e TF_RDMA_GID_INDEX=$GID_INDEX"
+    "-e NCCL_IB_HCA=$3 -e NCCL_IB_GID_INDEX=$4 -e NCCL_SOCKET_IFNAME=$2 -e TF_RDMA_GID_INDEX=$4"
 }
 
 # The Python engine's first start writes the rank cache and token map (as the engine's tools/dsv41-zig/build_inputs.sh)
 inputs_cmd() {  # $1 rank, $2 data dir, $3 netdev, $4 RoCE devices
   # the engine writes its token map and extensions under ~/.cache, so the cache is also its home's .cache
-  echo "docker run -d --name $CONTAINER-inputs $(run_opts "$2" "$3" "$4") -v $2/$CACHE_SUB:/root/.cache -e HOME=/root" \
+  local gid=$GID_INDEX; [ "$1" = 1 ] && gid=$WORKER_GID_INDEX
+  echo "docker run -d --name $CONTAINER-inputs $(run_opts "$2" "$3" "$4" "$gid") -v $2/$CACHE_SUB:/root/.cache -e HOME=/root" \
     "-e TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions -e TF_DS_REPLAY=1 -e TF_DS_PREFILL_CHUNK=2048" \
     "-e TF_DS_RANK_CACHE=/root/.cache/tf-ds-rank -e TF_DS_RANK_CACHE_READERS=32 -e TF_DS_ENGRAM=/engram" \
     "--entrypoint python3 $IMAGE -m tensorfold serve /model --tp 2 --rank $1 --master $HEAD_IP --host 127.0.0.1" \
@@ -64,7 +66,7 @@ inputs_cmd() {  # $1 rank, $2 data dir, $3 netdev, $4 RoCE devices
 
 # Serving: rank 1 follows rank 0 (the engine's README, v0.6.x)
 rank1_cmd() {
-  echo "docker run -d --name $CONTAINER $(run_opts "$WORKER_DATA_DIR" "$WORKER_IFACE" "$WORKER_HCA") -e TF_DS_REPLAY_FLOOR=1" \
+  echo "docker run -d --name $CONTAINER $(run_opts "$WORKER_DATA_DIR" "$WORKER_IFACE" "$WORKER_HCA" "$WORKER_GID_INDEX") -e TF_DS_REPLAY_FLOOR=1" \
     "--entrypoint /opt/tf/bin/tf-dsv41-lanes $IMAGE /model /cache/tf-ds-rank 1 2 $HEAD_IP $TP_PORT /kit" \
     "--engram /engram --token-map /cache/dsv41_token_map.json --pool $CONTEXT --rdma $WORKER_HCA" \
     "--graphs 1 --side 1 --prefetch 1 --aio 1"
@@ -73,7 +75,7 @@ rank1_cmd() {
 rank0_cmd() {  # extra arguments go to tensorfold-native serve
   local key="" keyarg=""
   if [ -n "$API_KEY_FILE" ]; then key="-v $API_KEY_FILE:/run/api-key:ro"; keyarg="--api-key-file /run/api-key"; fi
-  echo "docker run -d --name $CONTAINER $(run_opts "$DATA_DIR" "$IFACE" "$HCA") $key -e TF_DS_REPLAY_FLOOR=1" \
+  echo "docker run -d --name $CONTAINER $(run_opts "$DATA_DIR" "$IFACE" "$HCA" "$GID_INDEX") $key -e TF_DS_REPLAY_FLOOR=1" \
     "-e TF_TP_WORLD=2 -e TF_TP_MASTER=$HEAD_IP -e TF_TP_PORT=$TP_PORT -e TF_DS_RANK_CACHE=/cache/tf-ds-rank" \
     "-e TF_DS_KIT=/kit -e TENSORFOLD_CUDA_KERNELS=/kit/aot -e TF_DS_ENGRAM=/engram" \
     "-e TF_DS_TOKEN_MAP=/cache/dsv41_token_map.json -e TF_RDMA_DEVICES=$HCA -e TF_DS_GRAPHS=1 -e TF_DS_HC_SIDE=1" \

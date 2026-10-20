@@ -14,16 +14,19 @@ step "1/5 Preflight"
 on_worker true || die "no key-based ssh to $WORKER (ssh-copy-id $WORKER)"
 for side in here there; do
   run() { if [ $side = here ]; then bash -c "$1"; else on_worker "$1"; fi; }
-  hca=$HCA; dd=$DATA_DIR; [ $side = there ] && hca=$WORKER_HCA dd=$WORKER_DATA_DIR
+  hca=$HCA; dd=$DATA_DIR; gid=$GID_INDEX; [ $side = there ] && hca=$WORKER_HCA dd=$WORKER_DATA_DIR gid=$WORKER_GID_INDEX
   run "docker info --format '{{.Runtimes}}' | grep -q nvidia" || die "$side: Docker without the NVIDIA runtime"
   run "command -v rsync >/dev/null && command -v python3 >/dev/null" || die "$side: needs rsync and python3"
   for d in ${hca//,/ }; do
     run "test -d /sys/class/infiniband/$d" || die "$side: no RoCE device $d"
-    t=$(run "cat /sys/class/infiniband/$d/ports/1/gid_attrs/types/$GID_INDEX 2>/dev/null" || true)
-    [ "$t" = "RoCE v2" ] || die "$side: $d GID index $GID_INDEX is '${t:-none}', not RoCE v2 (set GID_INDEX)"
+    t=$(run "cat /sys/class/infiniband/$d/ports/1/gid_attrs/types/$gid 2>/dev/null" || true)
+    [ "$t" = "RoCE v2" ] || die "$side: $d GID index $gid is '${t:-none}', not RoCE v2 (set GID_INDEX / WORKER_GID_INDEX)"
+    # an IPv6 link-local GID is also RoCE v2; the link needs the IPv4 one (::ffff:a.b.c.d), whose index can shift
+    g=$(run "cat /sys/class/infiniband/$d/ports/1/gids/$gid 2>/dev/null" || true)
+    case "$g" in 0000:0000:0000:0000:0000:ffff:*) ;; *) die "$side: $d GID index $gid is '${g:-none}', not an IPv4 RoCE v2 GID (show_gids; set GID_INDEX / WORKER_GID_INDEX)" ;; esac
   done
   free=$(run "mkdir -p $dd && df -BG --output=avail $dd | tail -1 | tr -dc 0-9")
-  note "$side: NVIDIA runtime, RoCE ($hca, GID $GID_INDEX), ${free} GB free for the data"
+  note "$side: NVIDIA runtime, RoCE ($hca, GID $gid), ${free} GB free for the data"
 done
 on_worker "ping -c 1 -W 2 $HEAD_IP >/dev/null" || die "the worker cannot reach HEAD_IP $HEAD_IP"
 note "worker reaches the head at $HEAD_IP"

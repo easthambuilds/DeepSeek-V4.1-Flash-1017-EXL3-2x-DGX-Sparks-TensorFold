@@ -42,6 +42,7 @@ HCA=${HCA:-}                  # the RoCE devices of the link, comma-separated, e
 GID_INDEX=${GID_INDEX:-5}     # RoCE v2 GID index (show_gids); 3 on some single-rail pairs
 WORKER_IFACE=${WORKER_IFACE:-}  # when the worker's names differ from the head's
 WORKER_HCA=${WORKER_HCA:-}
+WORKER_GID_INDEX=${WORKER_GID_INDEX:-}  # when the worker's IPv4 RoCE v2 GID sits at another index
 
 # Server
 HOST=${HOST:-127.0.0.1}

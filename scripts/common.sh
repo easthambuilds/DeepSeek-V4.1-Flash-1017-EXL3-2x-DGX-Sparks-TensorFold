@@ -8,6 +8,21 @@ step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
 die() { printf '\033[31m!! %s\033[0m\n' "$*" >&2; exit 1; }
 
+# ABLIT selects the checkpoint copy, its rank caches and its setup marker (scripts/config.sh)
+[[ "$ABLIT" =~ ^[01]$ ]] || die "ABLIT is 0 or 1, not $ABLIT"
+if [ "$ABLIT" = 1 ]; then
+  MODEL_SUB=model-ablit CACHE_SUB=cache-ablit PREPARED=$DATA_DIR/.prepared-ablit
+  [ "$MODEL_NAME" = DeepSeek-V4.1-Flash-1017-EXL3 ] && MODEL_NAME=DeepSeek-V4.1-Flash-1017-EXL3-Abliterated
+else
+  MODEL_SUB=model CACHE_SUB=cache PREPARED=$DATA_DIR/.prepared
+fi
+
+ablit_notice() {
+  note "ABLIT=1: layers 10-35 attn.wo_b from $ABLIT_ID at ${ABLIT_REVISION:0:8} (gated; MIT)."
+  note "That overlay removes the model's safety refusals. Read its RESPONSIBLE_USE.md, which you agreed to when"
+  note "requesting access, and supply your own filters. ABLIT=0 serves the published checkpoint unchanged."
+}
+
 : "${WORKER:?set WORKER=user@host in scripts/local.sh (see scripts/local.sh.example)}"
 [ -n "$HEAD_IP" ] || die "set HEAD_IP (the head's ConnectX-7 address) in scripts/local.sh"
 [ -n "$IFACE" ] || die "set IFACE (the head's netdev on the link) in scripts/local.sh"
@@ -33,14 +48,14 @@ IMAGE=${IMAGE:-dsv41-1017-tf:$PIN_HASH}
 # docker run options both ranks share; $1 data dir, $2 netdev, $3 RoCE devices
 run_opts() {
   echo "--gpus all --network host --ipc host --ulimit memlock=-1 --ulimit stack=67108864 --cap-add IPC_LOCK" \
-    "--device /dev/infiniband -v $1/model:/model:ro -v $1/engram:/engram:ro -v $1/kit:/kit:ro -v $1/cache:/cache" \
+    "--device /dev/infiniband -v $1/$MODEL_SUB:/model:ro -v $1/engram:/engram:ro -v $1/kit:/kit:ro -v $1/$CACHE_SUB:/cache" \
     "-e NCCL_IB_HCA=$3 -e NCCL_IB_GID_INDEX=$GID_INDEX -e NCCL_SOCKET_IFNAME=$2 -e TF_RDMA_GID_INDEX=$GID_INDEX"
 }
 
 # The Python engine's first start writes the rank cache and token map (as the engine's tools/dsv41-zig/build_inputs.sh)
 inputs_cmd() {  # $1 rank, $2 data dir, $3 netdev, $4 RoCE devices
   # the engine writes its token map and extensions under ~/.cache, so the cache is also its home's .cache
-  echo "docker run -d --name $CONTAINER-inputs $(run_opts "$2" "$3" "$4") -v $2/cache:/root/.cache -e HOME=/root" \
+  echo "docker run -d --name $CONTAINER-inputs $(run_opts "$2" "$3" "$4") -v $2/$CACHE_SUB:/root/.cache -e HOME=/root" \
     "-e TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions -e TF_DS_REPLAY=1 -e TF_DS_PREFILL_CHUNK=2048" \
     "-e TF_DS_RANK_CACHE=/root/.cache/tf-ds-rank -e TF_DS_RANK_CACHE_READERS=32 -e TF_DS_ENGRAM=/engram" \
     "--entrypoint python3 $IMAGE -m tensorfold serve /model --tp 2 --rank $1 --master $HEAD_IP --host 127.0.0.1" \

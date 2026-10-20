@@ -85,6 +85,43 @@ The model thinks before it answers (`reasoning_content`), so give replies enough
 Images: send OpenAI-style `image_url` parts with `data:` URLs. The engine's
 [README](https://github.com/bertholomus/deepseek-v4.1-tensorfold-tp2-2xgb10) has the formats and limits.
 
+## Optional: the abliteration overlay (`ABLIT=1`)
+
+`ABLIT=0`, the default, serves the checkpoint exactly as published. `ABLIT=1` serves a copy with Keys' (drowzeys')
+abliteration overlay for 1017,
+[`drowzeys/keys-DeepSeek-V4.1-Flash-1017-Abliterated`](https://huggingface.co/drowzeys/keys-DeepSeek-V4.1-Flash-1017-Abliterated)
+at `0bdc2036`. It replaces `attn.wo_b` in layers 10–35 with a rank-1 projection (λ 3.5), already quantized to EXL3 for
+Mia-AiLab's 2.9 bpw layout. Our checkpoint shares that layout tensor for tensor, so the same file fits. Layers 0–9 and
+36–39, the MTP heads, vision, Engram, the experts, the embedding and the head stay as published.
+
+**That overlay removes the model's safety refusals.** The repository is gated: request access on its page and agree
+to its [`RESPONSIBLE_USE.md`](https://huggingface.co/drowzeys/keys-DeepSeek-V4.1-Flash-1017-Abliterated/blob/0bdc2036113c4fdda38ef6005b3cbc0bc0dfa0f0/RESPONSIBLE_USE.md)
+first. You are responsible for how you use it and for any filters you put in front of it.
+
+```bash
+hf auth login                  # a read token for the account that was granted access (or set HF_TOKEN)
+ABLIT=1 ./start.sh restart     # prepares the copy the first time, then serves it
+./start.sh restart             # back to the published checkpoint (ABLIT=0)
+```
+
+With `ABLIT=1`, `scripts/prepare.sh` adds one step (3b):
+
+- `tools/hub_fetch.py` downloads only the files used from the pinned revision and checks each one against the Hub.
+  The EXL3 file must also match the sha256 pinned in `scripts/config.sh`.
+- The overlay's own `apply_mia29_wo_b_graft.py` runs unchanged in the image, on CPU with no network. It writes
+  `DATA_DIR/model-ablit` next to `DATA_DIR/model`: unchanged shards are hardlinks, and only the shards holding those
+  layers are rewritten. The script also stores four small MTP tensors as F32, an exact widening.
+- `tools/verify_ablit.py` then checks every tensor of the copy byte for byte. Each must equal the overlay's (104
+  tensors), be an exact F16→F32 widening of the published one (the four MTP tensors), or equal the published one.
+- Both Sparks do this locally, so nothing large is copied between them.
+
+The copy has its own rank caches (`DATA_DIR/cache-ablit`, ~106 GB per Spark) and its own setup marker, so switching
+between the two never touches the other's files. The API model id becomes `DeepSeek-V4.1-Flash-1017-EXL3-Abliterated`
+unless you set `MODEL_NAME`. Extra disk: the rewritten shards plus the second rank cache.
+
+The overlay's own gates (refusal and cyber prompt sets, on Mia-AiLab's 2.9 bpw with another TensorFold engine) are its
+author's. We have not run them on this checkpoint.
+
 ## What `scripts/prepare.sh` does
 
 Each step skips work already done, so it is safe to re-run.
@@ -116,8 +153,8 @@ copy is the base's (sha256 `0cbdebfb…`), while 1017's is `4745da4b…`.
 ## Configuration
 
 `scripts/config.sh` holds the pins and defaults. Override any of them in `scripts/local.sh`: `CONTEXT`, `PARALLEL`,
-`MAX_TOKENS`, `HOST`, `PORT`, `API_KEY_FILE`, `DATA_DIR`, `FABRIC_PEER` (copy the weights over the link), and
-`WORKER_IFACE` / `WORKER_HCA` (when the worker's names differ).
+`MAX_TOKENS`, `HOST`, `PORT`, `API_KEY_FILE`, `DATA_DIR`, `FABRIC_PEER` (copy the weights over the link),
+`WORKER_IFACE` / `WORKER_HCA` (when the worker's names differ), and `ABLIT` (0 or 1, above).
 
 ## Credits
 
@@ -157,6 +194,9 @@ This recipe stands on other people's work. Each entry says what we used and whet
   `KIT-LICENSES.md`.
 - **[LibertAIDAI](https://huggingface.co/LibertAIDAI):** the other 1017 EXL3 quant, measured beside ours for
   comparison only.
+- **[Keys / drowzeys](https://huggingface.co/drowzeys):** the optional abliteration overlay
+  [`keys-DeepSeek-V4.1-Flash-1017-Abliterated`](https://huggingface.co/drowzeys/keys-DeepSeek-V4.1-Flash-1017-Abliterated)
+  (MIT, gated) and its `apply_mia29_wo_b_graft.py`, used unchanged with `ABLIT=1` only.
 
 Not affiliated with or endorsed by DeepSeek, NVIDIA, the TensorFold authors, Bertholomus AI or Mia-AiLab.
 

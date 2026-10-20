@@ -21,6 +21,17 @@ KIT_REV=789625a7081e91643cb61ceafd15f588850c511a
 BIAS_VL_BASE_SHA256=0cbdebfbffed15722f096d6b8290933135d4393d0920059f7bcad4789f19387b
 BIAS_VL_SHA256=4745da4b5f24c67170ee24e2c95652e45ba13c0ca0abc2be3cc7a2a3545792d0
 
+# Optional: the Keys abliteration overlay (README, "Optional: the abliteration overlay"). ABLIT=0 (the default) serves
+# the checkpoint as published. ABLIT=1 serves a separate copy whose attn.wo_b in layers 10-35 is the overlay's; it needs
+# an HF token with access to the gated repo. Each setting has its own model directory, rank caches and setup marker,
+# so switching never touches the other's files.
+ABLIT=${ABLIT:-0}
+ABLIT_ID=drowzeys/keys-DeepSeek-V4.1-Flash-1017-Abliterated
+ABLIT_REVISION=${ABLIT_REVISION:-0bdc2036113c4fdda38ef6005b3cbc0bc0dfa0f0}
+ABLIT_SCRIPT=apply_mia29_wo_b_graft.py       # the overlay's own graft script, run unchanged in the image
+ABLIT_SIDECAR=exl3_wo_b_l10_35_mia29.safetensors   # EXL3 K=5 for Mia-AiLab's 2.9 bpw layout, which ours shares
+ABLIT_SIDECAR_SHA256=dcefb4a735f4985e4a5097cad69a059d85453f3bba148af3fc98269c7ee1ff7c
+
 # Where everything lives on each Spark (~520 GB: checkpoint ~200, Engram shards ~190, rank cache ~106, kit ~2)
 DATA_DIR=${DATA_DIR:-$HOME/.cache/dsv41-1017-tf}
 

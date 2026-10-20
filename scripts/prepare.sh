@@ -1,6 +1,7 @@
 #!/bin/bash
 # prepare.sh: the one-time setup of both Sparks, run on the head. Safe to re-run: each step skips what is done.
-#   1. preflight on both Sparks   2. the image   3. weights   4. the 1017 kit   5. each rank's cache
+#   1. preflight on both Sparks   2. the image   3. weights (3b. ABLIT=1: the overlay)   4. the 1017 kit
+#   5. each rank's cache
 . "$(dirname "$0")/common.sh"
 TOOLS=$ROOT/tools
 COPY_TO=$WORKER   # rsync target for the weights: the link address when FABRIC_PEER is set
@@ -57,6 +58,25 @@ note "checking the worker's copy against the Hub"
 on_worker "python3 $WORKER_DATA_DIR/tools/hub_fetch.py $QUANT_REPO $QUANT_REV $WORKER_DATA_DIR/model | tail -1 && \
   python3 $WORKER_DATA_DIR/tools/hub_fetch.py $BASE_REPO $BASE_REV $WORKER_DATA_DIR/engram $ENGRAM_FILES | tail -1"
 
+if [ "$ABLIT" = 1 ]; then
+  step "3b/5 The Keys abliteration overlay (ABLIT=1)"
+  ablit_notice
+  A=ablit-src
+  python3 "$TOOLS/hub_fetch.py" "$ABLIT_ID" "$ABLIT_REVISION" "$DATA_DIR/$A" "$ABLIT_SCRIPT" "$ABLIT_SIDECAR" \
+    EXL3_MIA29_ABLIT_META.json README.md RESPONSIBLE_USE.md | filter || die "cannot download the gated overlay:" \
+    "request access at https://huggingface.co/$ABLIT_ID, then hf auth login (or set HF_TOKEN)"
+  [ "$(sha256sum "$DATA_DIR/$A/$ABLIT_SIDECAR" | cut -d' ' -f1)" = "$ABLIT_SIDECAR_SHA256" ] \
+    || die "$ABLIT_SIDECAR does not match the pinned sha256"
+  rsync -a "$DATA_DIR/$A/" "$WORKER:$WORKER_DATA_DIR/$A/"
+  rsync -a "$TOOLS/" "$WORKER:$WORKER_DATA_DIR/tools/"
+  # The overlay's own script makes model-ablit next to model (tools/apply_ablit.sh); tools/verify_ablit.py checks it
+  mark="$QUANT_REPO@$QUANT_REV + $ABLIT_ID@$ABLIT_REVISION"
+  bash "$TOOLS/apply_ablit.sh" "$DATA_DIR" "$IMAGE" "$mark" "$ABLIT_SCRIPT" "$ABLIT_SIDECAR" || die "the overlay graft failed here"
+  on_worker "bash $WORKER_DATA_DIR/tools/apply_ablit.sh $WORKER_DATA_DIR $IMAGE '$mark' $ABLIT_SCRIPT $ABLIT_SIDECAR" \
+    || die "the overlay graft failed on the worker"
+  note "model-ablit made and checked on both"
+fi
+
 step "4/5 Kernel kit, with the 1017 image routing bias"
 K=$DATA_DIR/kit
 if [ -f "$K/NOTICE-1017.txt" ] && bash "$K/tools/verify_kit.sh" >/dev/null; then
@@ -81,14 +101,16 @@ on_worker "bash $WORKER_DATA_DIR/kit/tools/verify_kit.sh" >/dev/null || die "the
 note "kit-1017 verified on both"
 
 step "5/5 Rank caches and the Engram token map (first start of the Python engine)"
-have() { test -f "$1/cache/dsv41_token_map.json" && test -n "$(ls -A "$1/cache/tf-ds-rank" 2>/dev/null)"; }
+have() { test -f "$1/$CACHE_SUB/dsv41_token_map.json" && test -n "$(ls -A "$1/$CACHE_SUB/tf-ds-rank" 2>/dev/null)"; }
 stamp="$QUANT_REPO@$QUANT_REV $(cat "$DATA_DIR/model/model.safetensors.index.json" | sha256sum | cut -c1-16)"
-if have "$DATA_DIR" && on_worker "$(declare -f have); have $WORKER_DATA_DIR" \
-   && [ "$(cat "$DATA_DIR/cache/.made-from" 2>/dev/null)" = "$stamp" ]; then
+[ "$ABLIT" = 1 ] && stamp="$stamp + $ABLIT_ID@$ABLIT_REVISION"
+if have "$DATA_DIR" && on_worker "CACHE_SUB=$CACHE_SUB; $(declare -f have); have $WORKER_DATA_DIR" \
+   && [ "$(cat "$DATA_DIR/$CACHE_SUB/.made-from" 2>/dev/null)" = "$stamp" ]; then
   note "present on both"
 else
-  rm -rf "$DATA_DIR/cache"/{tf-ds-rank,dsv41_token_map.json}
-  on_worker "rm -rf $WORKER_DATA_DIR/cache/{tf-ds-rank,dsv41_token_map.json}"
+  mkdir -p "$DATA_DIR/$CACHE_SUB"; on_worker "mkdir -p $WORKER_DATA_DIR/$CACHE_SUB"
+  rm -rf "$DATA_DIR/$CACHE_SUB"/{tf-ds-rank,dsv41_token_map.json}
+  on_worker "rm -rf $WORKER_DATA_DIR/$CACHE_SUB/{tf-ds-rank,dsv41_token_map.json}"
   remove_both "$CONTAINER-inputs" >/dev/null
   eval "$(inputs_cmd 0 "$DATA_DIR" "$IFACE" "$HCA")" >/dev/null
   # rank 0 owns the TCPStore: rank 1 starts once its port listens (a fixed sleep races on a cold start)
@@ -99,12 +121,12 @@ else
   until [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/v1/models)" = 200 ]; do
     running_here "$CONTAINER-inputs" || { docker logs --tail 30 "$CONTAINER-inputs"; die "rank 0 stopped"; }
     running_there "$CONTAINER-inputs" || { on_worker "docker logs --tail 30 $CONTAINER-inputs"; die "rank 1 stopped"; }
-    sleep 30; note "$(( ($(date +%s) - t0) / 60 )) min, rank 0: $(du -sh "$DATA_DIR/cache/tf-ds-rank" 2>/dev/null | cut -f1)"
+    sleep 30; note "$(( ($(date +%s) - t0) / 60 )) min, rank 0: $(du -sh "$DATA_DIR/$CACHE_SUB/tf-ds-rank" 2>/dev/null | cut -f1)"
   done
   remove_both "$CONTAINER-inputs" >/dev/null
-  have "$DATA_DIR" && on_worker "$(declare -f have); have $WORKER_DATA_DIR" || die "rank caches missing after the first start"
-  echo "$stamp" > "$DATA_DIR/cache/.made-from"
+  have "$DATA_DIR" && on_worker "CACHE_SUB=$CACHE_SUB; $(declare -f have); have $WORKER_DATA_DIR" || die "rank caches missing after the first start"
+  echo "$stamp" > "$DATA_DIR/$CACHE_SUB/.made-from"
   note "done in $(( ($(date +%s) - t0) / 60 )) min"
 fi
-echo "$IMAGE $stamp" > "$DATA_DIR/.prepared"
+echo "$IMAGE $stamp" > "$PREPARED"
 step "Setup ready on both Sparks"

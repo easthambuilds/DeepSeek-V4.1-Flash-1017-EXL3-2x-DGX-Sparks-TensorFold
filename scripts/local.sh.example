@@ -14,3 +14,4 @@ GID_INDEX=5                    # RoCE v2 GID index; check with show_gids
 # HOST=0.0.0.0                 # listen beyond localhost (set API_KEY_FILE too)
 # API_KEY_FILE=$HOME/.config/dsv41-1017-tf/api-key
 # IMAGE=...                    # use an image you built yourself instead of scripts/prepare.sh's
+# ABLIT=1                      # the Keys abliteration overlay (README, gated; needs hf auth login or HF_TOKEN)

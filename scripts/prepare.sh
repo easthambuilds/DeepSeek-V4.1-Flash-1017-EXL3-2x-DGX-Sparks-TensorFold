@@ -15,7 +15,9 @@ on_worker true || die "no key-based ssh to $WORKER (ssh-copy-id $WORKER)"
 for side in here there; do
   run() { if [ $side = here ]; then bash -c "$1"; else on_worker "$1"; fi; }
   hca=$HCA; dd=$DATA_DIR; gid=$GID_INDEX; [ $side = there ] && hca=$WORKER_HCA dd=$WORKER_DATA_DIR gid=$WORKER_GID_INDEX
-  run "docker info --format '{{.Runtimes}}' | grep -q nvidia" || die "$side: Docker without the NVIDIA runtime"
+  # GPUs reach containers through the legacy nvidia runtime or, with current NVIDIA Container Toolkits (CDI), without one
+  run "docker info --format '{{.Runtimes}}' | grep -q nvidia || nvidia-ctk cdi list 2>/dev/null | grep -qx 'nvidia.com/gpu=all'" \
+    || die "$side: Docker without NVIDIA GPU support (neither the nvidia runtime nor an NVIDIA CDI device; install the NVIDIA Container Toolkit)"
   run "command -v rsync >/dev/null && command -v python3 >/dev/null" || die "$side: needs rsync and python3"
   for d in ${hca//,/ }; do
     run "test -d /sys/class/infiniband/$d" || die "$side: no RoCE device $d"

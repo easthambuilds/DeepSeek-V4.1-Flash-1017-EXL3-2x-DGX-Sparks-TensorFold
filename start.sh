@@ -10,6 +10,12 @@ step "Setup"
 if [ "$(cat "$PREPARED" 2>/dev/null | cut -d' ' -f1)" = "$IMAGE" ]; then
   note "ready ($PREPARED)"
 else
+  # preparing loads the engine to write the rank caches: a running server (e.g. the other ABLIT setting) stops first
+  if running_here "$CONTAINER" || running_there "$CONTAINER"; then
+    [ $RESTART = 1 ] || die "already running: ./start.sh restart, or ./stop.sh"
+    note "stopping the running server before the setup (requests in flight are cut off)"
+    remove_both "$CONTAINER"
+  fi
   bash "$ROOT/scripts/prepare.sh"
 fi
 
